@@ -1,0 +1,213 @@
+/* content.css - Styles pour le content script */
+
+/* Réinitialisation pour éviter les conflits */
+#floating-bubbles-container,
+#floating-bubbles-container *,
+#floating-bubbles-container *::before,
+#floating-bubbles-container *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Conteneur principal */
+#floating-bubbles-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #1f2937 !important;
+}
+
+/* Iframe du widget */
+#floating-bubbles-container iframe {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+}
+
+/* Prévenir les conflits avec les styles existants */
+#floating-bubbles-container .floating-bubble {
+  all: initial !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+/* Styles pour les éléments interactifs */
+#floating-bubbles-container [data-interactive="true"] {
+  pointer-events: auto !important;
+}
+
+/* Animation de chargement */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#floating-bubbles-container.loading {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Styles pour les notifications d'erreur */
+#floating-bubbles-container .error-notification {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid #fecaca !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  font-size: 14px !important;
+  z-index: 2147483648 !important;
+  pointer-events: auto !important;
+}
+
+/* Styles pour les messages de succès */
+#floating-bubbles-container .success-notification {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid #bbf7d0 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+  font-size: 14px !important;
+  z-index: 2147483648 !important;
+  pointer-events: auto !important;
+}
+
+/* Utilitaires Tailwind CSS pour l'iframe */
+.bg-white\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(12px) !important;
+}
+
+.rounded-xl {
+  border-radius: 0.75rem !important;
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.border-white\/30 {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.text-gray-800 {
+  color: #1f2937 !important;
+}
+
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+.text-red-800 {
+  color: #991b1b !important;
+}
+
+.bg-yellow-100 {
+  background-color: #fef3c7 !important;
+}
+
+.text-yellow-800 {
+  color: #92400e !important;
+}
+
+.bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+.text-blue-800 {
+  color: #1e40af !important;
+}
+
+.bg-blue-500\/80 {
+  background-color: rgba(59, 130, 246, 0.8) !important;
+}
+
+.bg-red-500\/80 {
+  background-color: rgba(239, 68, 68, 0.8) !important;
+}
+
+.hover\:bg-blue-600\/80:hover {
+  background-color: rgba(37, 99, 235, 0.8) !important;
+}
+
+.hover\:bg-red-600\/80:hover {
+  background-color: rgba(220, 38, 38, 0.8) !important;
+}
+
+.transition-colors {
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out !important;
+}
+
+.transition-all {
+  transition: all 0.15s ease-in-out !important;
+}
+
+.duration-200 {
+  transition-duration: 200ms !important;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  #floating-bubbles-container {
+    font-size: 12px !important;
+  }
+}
+
+/* Mode sombre (optionnel) */
+@media (prefers-color-scheme: dark) {
+  #floating-bubbles-container {
+    color: #f9fafb !important;
+  }
+  
+  .bg-white\/90 {
+    background-color: rgba(31, 41, 55, 0.9) !important;
+  }
+  
+  .text-gray-800 {
+    color: #f9fafb !important;
+  }
+  
+  .text-gray-600 {
+    color: #d1d5db !important;
+  }
+  
+  .text-gray-500 {
+    color: #9ca3af !important;
+  }
+}
