@@ -1,0 +1,534 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: transparent;
+    overflow: hidden;
+}
+
+/* Conteneur principal du widget - Adaptation dynamique */
+#widget-container {
+    position: fixed;
+    max-height: 80vh;
+    max-width: 400px;
+    min-width: 280px;
+    width: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 9999;
+    pointer-events: none;
+    /* Transition fluide pour les changements de position */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Conteneur des bulles empilées - Adaptation au contenu */
+.bubbles-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: auto;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Bulle de notification - Taille adaptative */
+.notification-bubble {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    animation: bubbleSpringIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+    /* Adaptation automatique de la taille */
+    width: 100%;
+    min-width: 260px;
+    max-width: 380px;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Effet de survol - mise en relief + zoom */
+.notification-bubble:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* Couleurs selon priorité */
+.notification-bubble.priority-high {
+    background: rgba(254, 242, 242, 0.7);
+    border-color: rgba(248, 113, 113, 0.2);
+}
+
+.notification-bubble.priority-high:hover {
+    background: rgba(254, 242, 242, 0.8);
+}
+
+.notification-bubble.priority-medium {
+    background: rgba(255, 251, 235, 0.7);
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.notification-bubble.priority-medium:hover {
+    background: rgba(255, 251, 235, 0.8);
+}
+
+.notification-bubble.priority-low {
+    background: rgba(239, 246, 255, 0.7);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.notification-bubble.priority-low:hover {
+    background: rgba(239, 246, 255, 0.8);
+}
+
+/* En-tête de la bulle */
+.bubble-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.bubble-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: #1f2937;
+    margin-bottom: 4px;
+    line-height: 1.3;
+    flex: 1;
+    padding-right: 8px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.bubble-close {
+    background: rgba(107, 114, 128, 0.1);
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 14px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.bubble-close:hover {
+    background: rgba(107, 114, 128, 0.2);
+    color: #374151;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Contenu de la bulle - Adaptation au contenu */
+.bubble-content {
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.bubble-content.truncated {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.bubble-time {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-bottom: 0;
+}
+
+/* Vue étendue */
+.notification-bubble.expanded {
+    transform: translateY(-6px) scale(1);
+    animation: none;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+    max-height: 400px;
+}
+
+.notification-bubble.expanded .bubble-content {
+    display: block;
+    -webkit-line-clamp: none;
+    overflow: visible;
+    max-height: none;
+}
+
+/* Métadonnées visibles uniquement en mode étendu */
+.bubble-meta {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.notification-bubble.expanded .bubble-meta {
+    display: block;
+}
+
+/* Badge de priorité */
+.bubble-priority {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+
+.bubble-priority.high {
+    background: rgba(254, 226, 226, 0.8);
+    color: #991b1b;
+}
+
+.bubble-priority.medium {
+    background: rgba(254, 243, 199, 0.8);
+    color: #92400e;
+}
+
+.bubble-priority.low {
+    background: rgba(219, 234, 254, 0.8);
+    color: #1e40af;
+}
+
+.priority-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+}
+
+/* Actions de la bulle */
+.bubble-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.bubble-btn {
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    flex: 1;
+    text-align: center;
+}
+
+.bubble-btn.delete {
+    background: #ef4444;
+    color: white;
+}
+
+.bubble-btn.delete:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.bubble-btn.close {
+    background: #3b82f6;
+    color: white;
+}
+
+.bubble-btn.close:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Bouton flottant d'ajout - Décalage dynamique */
+.add-bubble-btn {
+    position: fixed;
+    width: 56px;
+    height: 56px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-bubble-btn:hover {
+    transform: scale(1.1);
+    background: #2563eb;
+    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4);
+}
+
+.add-bubble-btn:active {
+    transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes bubbleSpringIn {
+    0% {
+        opacity: 0;
+        transform: translateY(30px) scale(0.8);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translateY(-5px) scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes bubbleOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.8);
+    }
+}
+
+.notification-bubble.removing {
+    animation: bubbleOut 0.4s ease-in-out forwards;
+}
+
+/* Positionnement configurable - CÔTÉ GAUCHE */
+.widget-container.position-top-left {
+    top: 20px;
+    left: 20px;
+    bottom: auto;
+    right: auto;
+}
+
+.widget-container.position-top-right {
+    top: 20px;
+    left: 20px; /* Changé de right vers left */
+    bottom: auto;
+    right: auto;
+}
+
+.widget-container.position-bottom-left {
+    bottom: 20px;
+    left: 20px;
+    top: auto;
+    right: auto;
+}
+
+.widget-container.position-bottom-right {
+    bottom: 20px;
+    left: 20px; /* Changé de right vers left */
+    top: auto;
+    right: auto;
+}
+
+/* Positionnement du bouton par coin - CÔTÉ GAUCHE avec décalage dynamique */
+.add-bubble-btn.position-bottom-right {
+    bottom: 20px;
+    left: 20px; /* Changé de right vers left */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-bubble-btn.position-bottom-left {
+    bottom: 20px;
+    left: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-bubble-btn.position-top-right {
+    top: 20px;
+    left: 20px; /* Changé de right vers left */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-bubble-btn.position-top-left {
+    top: 20px;
+    left: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Classes pour le décalage dynamique du bouton */
+.add-bubble-btn.shifted-up {
+    transform: translateY(-70px);
+}
+
+.add-bubble-btn.shifted-up.position-bottom-right,
+.add-bubble-btn.shifted-up.position-bottom-left {
+    /* Décalage supplémentaire pour les positions bottom */
+    transform: translateY(-100px);
+}
+
+.add-bubble-btn.shifted-up.position-top-right,
+.add-bubble-btn.shifted-up.position-top-left {
+    /* Décalage vers le bas pour les positions top */
+    transform: translateY(70px);
+}
+
+/* Adaptation dynamique du conteneur selon le nombre de bulles */
+.widget-container.has-bubbles {
+    /* Ajustement automatique quand il y a des bulles */
+    height: auto;
+    max-height: 60vh;
+}
+
+.widget-container.many-bubbles {
+    /* Quand il y a beaucoup de bulles (plus de 3) */
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+/* Scrollbar personnalisée pour le conteneur */
+.widget-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.widget-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.widget-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+}
+
+.widget-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive - Compatible mobile */
+@media (max-width: 640px) {
+    #widget-container {
+        width: 280px;
+        max-width: 90vw;
+        left: 10px !important;
+        right: auto !important;
+        min-width: 260px;
+    }
+
+    .add-bubble-btn {
+        left: 10px !important;
+        right: auto !important;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+
+    .add-bubble-btn.shifted-up {
+        transform: translateY(-60px);
+    }
+
+    .notification-bubble {
+        padding: 12px;
+        border-radius: 16px;
+        min-width: 240px;
+        max-width: 260px;
+    }
+
+    .bubble-title {
+        font-size: 14px;
+    }
+
+    .bubble-content {
+        font-size: 12px;
+        max-height: 150px;
+    }
+
+    .bubble-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+}
+
+/* Responsive - Très petits écrans */
+@media (max-width: 480px) {
+    #widget-container {
+        width: 260px;
+        max-width: 85vw;
+        min-width: 240px;
+    }
+
+    .notification-bubble {
+        min-width: 220px;
+        max-width: 240px;
+        padding: 10px;
+    }
+
+    .bubble-content {
+        max-height: 120px;
+    }
+}
+
+/* Mode sombre (optionnel) */
+@media (prefers-color-scheme: dark) {
+    .notification-bubble {
+        background: rgba(31, 41, 55, 0.8);
+        border-color: rgba(75, 85, 99, 0.3);
+    }
+    
+    .notification-bubble:hover {
+        background: rgba(31, 41, 55, 0.9);
+    }
+    
+    .bubble-title {
+        color: #f9fafb;
+    }
+    
+    .bubble-content {
+        color: #d1d5db;
+    }
+    
+    .bubble-time {
+        color: #9ca3af;
+    }
+    
+    .bubble-close {
+        color: #9ca3af;
+    }
+    
+    .bubble-close:hover {
+        color: #d1d5db;
+    }
+    
+    .widget-container::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .widget-container::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .widget-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+    }
+}

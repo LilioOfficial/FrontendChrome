@@ -85,6 +85,7 @@ class ExtensionBackground {
     }
   
     async handleIconClick(tab) {
+      console.log("handleIconClick")
       // Vérifier si on est sur Google Meet
       if (!tab.url || !tab.url.includes('meet.google.com')) {
         // Ouvrir Google Meet si on n'y est pas
@@ -107,6 +108,7 @@ class ExtensionBackground {
     }
   
     async handleMessage(request, sender, sendResponse) {
+
       try {
         switch (request.action) {
           case 'getApiData':
@@ -143,26 +145,27 @@ class ExtensionBackground {
     }
   
     async fetchApiData(url, options = {}) {
-      try {
-        const response = await fetch(url, {
-          method: options.method || 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers
-          },
-          body: options.body ? JSON.stringify(options.body) : undefined
-        });
+      console.log("FestchApiData")
+      // try {
+      //   const response = await fetch(url, {
+      //     method: options.method || 'GET',
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //       ...options.headers
+      //     },
+      //     body: options.body ? JSON.stringify(options.body) : undefined
+      //   });
   
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+      //   if (!response.ok) {
+      //     throw new Error(`HTTP error! status: ${response.status}`);
+      //   }
   
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        console.error('Erreur API:', error);
-        throw error;
-      }
+      //   const data = await response.json();
+      //   return data;
+      // } catch (error) {
+      //   console.error('Erreur API:', error);
+      //   throw error;
+      // }
     }
   
     async handleTabUpdate(tabId, changeInfo, tab) {
@@ -208,4 +211,5 @@ class ExtensionBackground {
     if (alarm.name === 'cleanup') {
       extensionBackground.cleanupExpiredData();
     }
+  
   });
