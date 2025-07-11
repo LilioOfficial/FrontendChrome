@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Floating Bubbles for Google Meet",
   "version": "1.0.0",
-  "description": "Widget de notifications flottantes pour améliorer l'expérience Google Meet",
-  
+  "description": "Widget de notifications flottantes pour améliorer l'expérience Google Meet avec animations et positionnement intelligent",
+
   "permissions": [
     "activeTab",
     "storage",
@@ -11,41 +11,66 @@
     "alarms",
     "scripting"
   ],
-  
+
   "host_permissions": [
     "https://meet.google.com/*"
   ],
-  
+
   "background": {
     "service_worker": "background.js"
   },
-  
+
   "content_scripts": [
     {
       "matches": ["https://meet.google.com/*"],
       "js": ["content.js"],
       "css": ["content.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
-  
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Floating Bubbles - Widget pour Google Meet"
-  },
-  
+
   "web_accessible_resources": [
     {
       "resources": [
         "widget.html",
-        "widget.css", 
-        "widget.js"
+        "widget.css",
+        "widget.js",
+        "assets/*"
       ],
       "matches": ["https://meet.google.com/*"]
     }
   ],
-  
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Floating Bubbles - Contrôler les notifications"
+  },
+
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';"
-  }
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline';"
+  },
+
+  "commands": {
+    "toggle-widget": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
+      },
+      "description": "Activer/désactiver les bulles flottantes"
+    },
+    "add-bubble": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+N",
+        "mac": "Command+Shift+N"
+      },
+      "description": "Ajouter une nouvelle bulle de notification"
+    }
+  },
+
+  "optional_permissions": [
+    "notifications"
+  ],
+
+  "minimum_chrome_version": "88"
 }

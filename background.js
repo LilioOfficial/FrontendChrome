@@ -1,215 +1,410 @@
-// background.js - Service Worker pour l'extension
-class ExtensionBackground {
-    constructor() {
-      this.contextMenuCreated = false;
+// background.js - Service Worker pour l'extension Floating Bubbles - Version synchronisée
+class FloatingBubblesBackgroundManager {
+  constructor() {
+      this.preferences = {
+          widgetEnabled: true,
+          widgetPosition: 'bottom-left', // Position par défaut selon les spécifications
+          maxBubbles: 5,
+          autoHide: false,
+          animationDuration: 2000, // Durée d'animation de chargement
+          notificationFrequency: 30000 // Fréquence des notifications auto (30s)
+      };
+      this.activeTabId = null;
       this.init();
-    }
-  
-    init() {
-      // Gérer l'installation de l'extension
-      chrome.runtime.onInstalled.addListener((details) => {
-        this.handleInstall(details);
-      });
-  
-      // Gérer les clics sur l'icône de l'extension
-      chrome.action.onClicked.addListener((tab) => {
-        this.handleIconClick(tab);
-      });
-  
-      // Gérer les messages des content scripts
-      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        this.handleMessage(request, sender, sendResponse);
-        return true; // Indique que la réponse sera asynchrone
-      });
-  
-      // Gérer les changements d'onglets
-      chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-        this.handleTabUpdate(tabId, changeInfo, tab);
-      });
+  }
 
+  init() {
+      console.log('Initialisation du Background Manager...');
+      
+      // Charger les préférences sauvegardées
+      this.loadPreferences();
+      
+      // Configurer les écouteurs d'événements
+      this.setupEventListeners();
+      
+      // Configurer les alarmes pour les notifications automatiques
+      this.setupAlarms();
+      
       // Configurer le menu contextuel
       this.setupContextMenu();
-    }
-
-    setupContextMenu() {
-      if (this.contextMenuCreated) return;
       
+      console.log('Background Manager initialisé');
+  }
+
+  async loadPreferences() {
       try {
-        chrome.contextMenus.removeAll(() => {
-          chrome.contextMenus.create({
-            id: 'toggle-widget',
-            title: 'Activer/Désactiver les bulles flottantes',
-            contexts: ['page']
-          });
-          this.contextMenuCreated = true;
-        });
-
-        chrome.contextMenus.onClicked.addListener((info, tab) => {
-          this.handleContextMenuClick(info, tab);
-        });
+          const result = await chrome.storage.sync.get(Object.keys(this.preferences));
+          this.preferences = { ...this.preferences, ...result };
+          console.log('Préférences chargées:', this.preferences);
       } catch (error) {
-        console.error('Erreur lors de la configuration du menu contextuel:', error);
+          console.error('Erreur lors du chargement des préférences:', error);
       }
-    }
+  }
 
-    async handleContextMenuClick(info, tab) {
-      if (info.menuItemId === 'toggle-widget') {
-        try {
-          const response = await chrome.tabs.sendMessage(tab.id, { action: 'toggle' });
-          if (response && response.success) {
-            console.log('Widget basculé:', response.enabled);
-          }
-        } catch (error) {
-          console.error('Erreur lors du basculement via le menu contextuel:', error);
-        }
+  async savePreference(key, value) {
+      try {
+          this.preferences[key] = value;
+          await chrome.storage.sync.set({ [key]: value });
+          console.log(`Préférence sauvegardée: ${key} = ${value}`);
+          return true;
+      } catch (error) {
+          console.error('Erreur lors de la sauvegarde:', error);
+          return false;
       }
-    }
-  
-    handleInstall(details) {
-      console.log('Extension installée:', details.reason);
-      
-      // Définir les paramètres par défaut
-      chrome.storage.sync.set({
-        widgetEnabled: true,
-        widgetPosition: 'bottom-right',
-        maxBubbles: 5,
-        autoHide: false
+  }
+
+  setupEventListeners() {
+      // Écouter les messages des content scripts et popup
+      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+          this.handleMessage(request, sender, sendResponse);
+          return true; // Maintenir la connexion pour les réponses asynchrones
       });
-  
-      // Ouvrir la page de bienvenue (optionnel)
-      if (details.reason === 'install') {
-        chrome.tabs.create({
-          url: 'https://meet.google.com'
-        });
-      }
-    }
-  
-    async handleIconClick(tab) {
-      console.log("handleIconClick")
-      // Vérifier si on est sur Google Meet
-      if (!tab.url || !tab.url.includes('meet.google.com')) {
-        // Ouvrir Google Meet si on n'y est pas
-        chrome.tabs.create({
-          url: 'https://meet.google.com'
-        });
-        return;
-      }
-  
-      try {
-        // Basculer l'état du widget
-        const response = await chrome.tabs.sendMessage(tab.id, { action: 'toggle' });
-        
-        if (response && response.success) {
-          console.log('Widget basculé:', response.enabled);
-        }
-      } catch (error) {
-        console.error('Erreur lors du basculement:', error);
-      }
-    }
-  
-    async handleMessage(request, sender, sendResponse) {
 
-      try {
-        switch (request.action) {
-          case 'getApiData':
-            // Proxy pour les appels API externes
-            const apiResponse = await this.fetchApiData(request.url, request.options);
-            sendResponse({ success: true, data: apiResponse });
-            break;
-  
-          case 'savePreference':
-            // Sauvegarder les préférences
-            await chrome.storage.sync.set({ [request.key]: request.value });
-            sendResponse({ success: true });
-            break;
-  
-          case 'getPreferences':
-            // Récupérer les préférences
-            const prefs = await chrome.storage.sync.get(request.keys);
-            sendResponse({ success: true, preferences: prefs });
-            break;
-  
-          case 'logEvent':
-            // Logger les événements (pour le debugging)
-            console.log('Widget Event:', request.event, request.data);
-            sendResponse({ success: true });
-            break;
-  
-          default:
-            sendResponse({ success: false, error: 'Action non reconnue' });
-        }
-      } catch (error) {
-        console.error('Erreur dans handleMessage:', error);
-        sendResponse({ success: false, error: error.message });
-      }
-    }
-  
-    async fetchApiData(url, options = {}) {
-      console.log("FestchApiData")
-      // try {
-      //   const response = await fetch(url, {
-      //     method: options.method || 'GET',
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //       ...options.headers
-      //     },
-      //     body: options.body ? JSON.stringify(options.body) : undefined
-      //   });
-  
-      //   if (!response.ok) {
-      //     throw new Error(`HTTP error! status: ${response.status}`);
-      //   }
-  
-      //   const data = await response.json();
-      //   return data;
-      // } catch (error) {
-      //   console.error('Erreur API:', error);
-      //   throw error;
-      // }
-    }
-  
-    async handleTabUpdate(tabId, changeInfo, tab) {
-      // Réagir aux changements d'URL
-      if (changeInfo.status === 'complete' && tab.url) {
-        const isGoogleMeet = tab.url.includes('meet.google.com');
-        
-        if (isGoogleMeet) {
-          console.log('Page Google Meet détectée');
-        }
-      }
-    }
-  
-    // Méthode pour nettoyer les données expirées
-    async cleanupExpiredData() {
-      try {
-        const result = await chrome.storage.sync.get();
-        const now = Date.now();
-        const expirationTime = 24 * 60 * 60 * 1000; // 24 heures
-  
-        for (const [key, value] of Object.entries(result)) {
-          if (value && value.timestamp && now - value.timestamp > expirationTime) {
-            await chrome.storage.sync.remove(key);
+      // Écouter les changements d'onglet
+      chrome.tabs.onActivated.addListener((activeInfo) => {
+          this.activeTabId = activeInfo.tabId;
+          this.checkAndInjectIntoTab(activeInfo.tabId);
+      });
+
+      // Écouter les mises à jour d'URL
+      chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+          if (changeInfo.status === 'complete' && tab.url && tab.url.includes('meet.google.com')) {
+              this.checkAndInjectIntoTab(tabId);
           }
-        }
-      } catch (error) {
-        console.error('Erreur lors du nettoyage:', error);
+      });
+
+      // Écouter l'installation/mise à jour de l'extension
+      chrome.runtime.onInstalled.addListener((details) => {
+          this.handleInstall(details);
+      });
+  }
+
+  setupAlarms() {
+      // Configurer une alarme pour les notifications automatiques
+      chrome.alarms.onAlarm.addListener((alarm) => {
+          if (alarm.name === 'autoNotification') {
+              this.triggerAutoNotification();
+          }
+      });
+
+      // Créer l'alarme récurrente si les notifications auto sont activées
+      if (this.preferences.autoHide) {
+          chrome.alarms.create('autoNotification', {
+              delayInMinutes: this.preferences.notificationFrequency / 60000,
+              periodInMinutes: this.preferences.notificationFrequency / 60000
+          });
       }
-    }
   }
-  
-  // Initialiser le service worker
-  let extensionBackground;
-  
-  // Éviter les redéclarations
-  if (!extensionBackground) {
-    extensionBackground = new ExtensionBackground();
+
+  setupContextMenu() {
+      // Créer le menu contextuel
+      chrome.contextMenus.removeAll(() => {
+          chrome.contextMenus.create({
+              id: 'toggleWidget',
+              title: 'Activer/Désactiver les bulles flottantes',
+              contexts: ['page'],
+              documentUrlPatterns: ['https://meet.google.com/*']
+          });
+
+          chrome.contextMenus.create({
+              id: 'addBubble',
+              title: 'Ajouter une bulle de notification',
+              contexts: ['page'],
+              documentUrlPatterns: ['https://meet.google.com/*']
+          });
+
+          chrome.contextMenus.create({
+              id: 'separator',
+              type: 'separator',
+              contexts: ['page'],
+              documentUrlPatterns: ['https://meet.google.com/*']
+          });
+
+          chrome.contextMenus.create({
+              id: 'positionBottomLeft',
+              title: 'Position: Bas gauche',
+              type: 'radio',
+              checked: this.preferences.widgetPosition === 'bottom-left',
+              contexts: ['page'],
+              documentUrlPatterns: ['https://meet.google.com/*']
+          });
+
+          chrome.contextMenus.create({
+              id: 'positionTopLeft',
+              title: 'Position: Haut gauche',
+              type: 'radio',
+              checked: this.preferences.widgetPosition === 'top-left',
+              contexts: ['page'],
+              documentUrlPatterns: ['https://meet.google.com/*']
+          });
+      });
+
+      // Écouter les clics sur le menu contextuel
+      chrome.contextMenus.onClicked.addListener((info, tab) => {
+          this.handleContextMenuClick(info, tab);
+      });
   }
-  
-  // Nettoyer les données expirées périodiquement
-  chrome.alarms.create('cleanup', { periodInMinutes: 60 });
-  chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === 'cleanup') {
-      extensionBackground.cleanupExpiredData();
-    }
-  
-  });
+
+  async handleMessage(request, sender, sendResponse) {
+      try {
+          switch (request.action) {
+              case 'getPreferences':
+                  sendResponse({
+                      success: true,
+                      preferences: this.getRequestedPreferences(request.keys)
+                  });
+                  break;
+
+              case 'savePreference':
+                  const saved = await this.savePreference(request.key, request.value);
+                  sendResponse({ success: saved });
+                  break;
+
+              case 'toggleWidget':
+                  await this.toggleWidget(sender.tab.id);
+                  sendResponse({ success: true });
+                  break;
+
+              case 'addBubble':
+                  await this.addBubbleToTab(sender.tab.id, request.bubble);
+                  sendResponse({ success: true });
+                  break;
+
+              case 'logEvent':
+                  this.logEvent(request.event, request.data);
+                  sendResponse({ success: true });
+                  break;
+
+              case 'checkMeetPage':
+                  const isMeetPage = await this.checkIfMeetPage(sender.tab.id);
+                  sendResponse({ success: true, isMeetPage });
+                  break;
+
+              case 'injectWidget':
+                  await this.injectWidgetIntoTab(sender.tab.id);
+                  sendResponse({ success: true });
+                  break;
+
+              default:
+                  sendResponse({ success: false, error: 'Action non reconnue' });
+          }
+      } catch (error) {
+          console.error('Erreur dans handleMessage:', error);
+          sendResponse({ success: false, error: error.message });
+      }
+  }
+
+  getRequestedPreferences(keys) {
+      if (!keys || keys.length === 0) {
+          return this.preferences;
+      }
+      
+      const result = {};
+      keys.forEach(key => {
+          if (this.preferences.hasOwnProperty(key)) {
+              result[key] = this.preferences[key];
+          }
+      });
+      return result;
+  }
+
+  async checkAndInjectIntoTab(tabId) {
+      try {
+          const tab = await chrome.tabs.get(tabId);
+          if (tab.url && tab.url.includes('meet.google.com')) {
+              // Attendre un peu pour s'assurer que la page est bien chargée
+              setTimeout(() => {
+                  this.injectWidgetIntoTab(tabId);
+              }, 2000);
+          }
+      } catch (error) {
+          console.error('Erreur lors de la vérification de l\'onglet:', error);
+      }
+  }
+
+  async injectWidgetIntoTab(tabId) {
+      try {
+          // Vérifier si le content script est déjà injecté
+          const results = await chrome.scripting.executeScript({
+              target: { tabId: tabId },
+              func: () => {
+                  return typeof window.googleMeetWidgetManager !== 'undefined';
+              }
+          });
+
+          if (results && results[0] && results[0].result) {
+              console.log('Content script déjà injecté dans l\'onglet', tabId);
+              return;
+          }
+
+          // Injecter le content script si nécessaire
+          await chrome.scripting.executeScript({
+              target: { tabId: tabId },
+              files: ['content.js']
+          });
+
+          await chrome.scripting.insertCSS({
+              target: { tabId: tabId },
+              files: ['content.css']
+          });
+
+          console.log('Widget injecté dans l\'onglet', tabId);
+      } catch (error) {
+          console.error('Erreur lors de l\'injection du widget:', error);
+      }
+  }
+
+  async toggleWidget(tabId) {
+      try {
+          const response = await chrome.tabs.sendMessage(tabId, { action: 'toggle' });
+          
+          if (response && response.success) {
+              this.preferences.widgetEnabled = response.enabled;
+              await this.savePreference('widgetEnabled', response.enabled);
+              console.log('Widget basculé:', response.enabled ? 'activé' : 'désactivé');
+          }
+      } catch (error) {
+          console.error('Erreur lors du basculement du widget:', error);
+      }
+  }
+
+  async addBubbleToTab(tabId, bubbleData) {
+      try {
+          const bubble = bubbleData || this.generateSampleBubble();
+          await chrome.tabs.sendMessage(tabId, { 
+              action: 'addBubble', 
+              bubble: bubble 
+          });
+          console.log('Bulle ajoutée à l\'onglet', tabId);
+      } catch (error) {
+          console.error('Erreur lors de l\'ajout de bulle:', error);
+      }
+  }
+
+  generateSampleBubble() {
+      const sampleBubbles = [
+          {
+              title: 'Nouveau participant',
+              content: 'Un utilisateur a rejoint la réunion',
+              priority: 'medium',
+              fullDescription: 'Un nouveau participant vient de rejoindre votre réunion Google Meet.'
+          },
+          {
+              title: 'Partage d\'écran',
+              content: 'Partage d\'écran activé',
+              priority: 'high',
+              fullDescription: 'Le partage d\'écran est maintenant actif.'
+          },
+          {
+              title: 'Chat actif',
+              content: 'Nouveaux messages disponibles',
+              priority: 'low',
+              fullDescription: 'De nouveaux messages ont été postés dans le chat.'
+          },
+          {
+              title: 'Qualité réseau',
+              content: 'Connexion stable',
+              priority: 'low',
+              fullDescription: 'Votre connexion réseau est stable.'
+          }
+      ];
+
+      const randomBubble = sampleBubbles[Math.floor(Math.random() * sampleBubbles.length)];
+      return {
+          ...randomBubble,
+          id: Date.now() + Math.random(),
+          timestamp: Date.now()
+      };
+  }
+
+  async handleContextMenuClick(info, tab) {
+      switch (info.menuItemId) {
+          case 'toggleWidget':
+              await this.toggleWidget(tab.id);
+              break;
+
+          case 'addBubble':
+              await this.addBubbleToTab(tab.id);
+              break;
+
+          case 'positionBottomLeft':
+              await this.updateWidgetPosition(tab.id, 'bottom-left');
+              break;
+
+          case 'positionTopLeft':
+              await this.updateWidgetPosition(tab.id, 'top-left');
+              break;
+      }
+  }
+
+  async updateWidgetPosition(tabId, position) {
+      try {
+          await chrome.tabs.sendMessage(tabId, { 
+              action: 'updatePosition', 
+              position: position 
+          });
+          await this.savePreference('widgetPosition', position);
+          console.log('Position du widget mise à jour:', position);
+      } catch (error) {
+          console.error('Erreur lors de la mise à jour de position:', error);
+      }
+  }
+
+  async triggerAutoNotification() {
+      try {
+          const tabs = await chrome.tabs.query({
+              url: 'https://meet.google.com/*'
+          });
+
+          for (const tab of tabs) {
+              if (this.preferences.widgetEnabled) {
+                  await this.addBubbleToTab(tab.id);
+              }
+          }
+      } catch (error) {
+          console.error('Erreur lors de la notification automatique:', error);
+      }
+  }
+
+  async checkIfMeetPage(tabId) {
+      try {
+          const tab = await chrome.tabs.get(tabId);
+          return tab.url && tab.url.includes('meet.google.com');
+      } catch (error) {
+          console.error('Erreur lors de la vérification de la page Meet:', error);
+          return false;
+      }
+  }
+
+  logEvent(event, data) {
+      console.log(`Event: ${event}`, data);
+      // Ici on pourrait ajouter de la télémétrie ou des analytics
+  }
+
+  async handleInstall(details) {
+      console.log('Extension installée/mise à jour:', details.reason);
+      
+      if (details.reason === 'install') {
+          // Première installation
+          console.log('Première installation de l\'extension');
+          
+          // Ouvrir la page de configuration ou d'aide
+          try {
+              await chrome.tabs.create({
+                  url: chrome.runtime.getURL('welcome.html')
+              });
+          } catch (error) {
+              console.log('Page de bienvenue non disponible');
+          }
+      } else if (details.reason === 'update') {
+          // Mise à jour
+          console.log('Extension mise à jour vers la version', chrome.runtime.getManifest().version);
+      }
+  }
+}
+
+// Initialiser le gestionnaire
+const backgroundManager = new FloatingBubblesBackgroundManager();
+
+// Exposer globalement pour le debugging
+globalThis.backgroundManager = backgroundManager;

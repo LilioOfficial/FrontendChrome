@@ -1,71 +1,249 @@
-/* content.css - Styles d'intégration pour Google Meet */
+/* content.css - Styles d'intégration pour Google Meet - Version synchronisée */
 
-/* Conteneur principal du widget - s'assurer qu'il ne bloque pas l'interface Google Meet */
+/* Conteneur principal du widget - Invisible mais présent pour la structure */
 #floating-bubbles-container {
   position: fixed !important;
-  z-index: 1 !important;
-  pointer-events: auto !important;
+  z-index: 10001 !important;
+  pointer-events: none !important;
   top: 0 !important;
   left: 0 !important;
-  width: 0% !important;
-  height: 0% !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
 }
 
-/* IFrame du widget */
+/* IFrame du widget - Positionnement bottom-left selon les spécifications */
 #floating-bubbles-widget {
   position: fixed !important;
   border: none !important;
   background: transparent !important;
-  z-index: 1 !important;
-  width: 250px !important;
-  height: 250px !important;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
+  
+  /* Dimensions adaptatives */
+  width: 400px !important;
+  height: 600px !important;
   max-width: 90vw !important;
-  max-height: 90vh !important;
+  max-height: 70vh !important;
+  
+  /* Positionnement par défaut - sera ajusté par JS */
+  bottom: 80px !important;
+  left: 20px !important;
+  top: auto !important;
+  right: auto !important;
+  
+  /* Transitions fluides */
+  transition: all 0.3s ease !important;
 }
 
-/* Assurer que le widget ne bloque pas les interactions avec Google Meet */
-#floating-bubbles-widget:not(:hover) {
+/* Assurer que le widget reste au-dessus des éléments Google Meet */
+#floating-bubbles-container,
+#floating-bubbles-widget {
+  z-index: 10001 !important;
+}
+
+/* Prévenir les conflits avec les styles Google Meet */
+#floating-bubbles-container *,
+#floating-bubbles-widget * {
+  box-sizing: border-box !important;
+}
+
+/* Assurer que l'iframe ne bloque pas les interactions Meet importantes */
+#floating-bubbles-widget {
+  /* Permettre les événements de souris sur l'iframe */
   pointer-events: auto !important;
 }
 
-#floating-bubbles-widget:hover {
-  pointer-events: auto !important;
+/* Styles pour les états de chargement */
+#floating-bubbles-widget[src=""],
+#floating-bubbles-widget:not([src]) {
+  opacity: 0 !important;
+  transform: translateX(-100%) !important;
+  transition: opacity 0.3s ease, transform 0.3s ease !important;
 }
-/* 
-Responsiv e pour les petits écrans
+
+#floating-bubbles-widget[src]:not([src=""]) {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+/* Responsive pour tablettes */
 @media (max-width: 768px) {
   #floating-bubbles-widget {
-      width: 100px !important;
-      height: 100px !important;
+      width: 320px !important;
+      height: 500px !important;
+      max-width: 85vw !important;
+      max-height: 65vh !important;
   }
 }
 
+/* Responsive pour smartphones */
 @media (max-width: 480px) {
   #floating-bubbles-widget {
       width: 280px !important;
       height: 400px !important;
-      bottom: 10px !important;
-      right: 10px !important;
+      max-width: 90vw !important;
+      max-height: 60vh !important;
+      bottom: 60px !important;
+      left: 10px !important;
   }
-} */
+}
 
-/* S'assurer que le widget reste au-dessus des éléments Google Meet */
-#floating-bubbles-container,
+/* Très petits écrans */
+@media (max-width: 320px) {
+  #floating-bubbles-widget {
+      width: 260px !important;
+      height: 350px !important;
+      max-width: 95vw !important;
+      max-height: 55vh !important;
+      bottom: 50px !important;
+      left: 5px !important;
+  }
+}
+
+/* Adaptations pour les écrans en mode paysage sur mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  #floating-bubbles-widget {
+      height: 300px !important;
+      max-height: 80vh !important;
+      bottom: 40px !important;
+  }
+}
+
+/* Assurer la compatibilité avec les thèmes sombres de Google Meet */
+@media (prefers-color-scheme: dark) {
+  #floating-bubbles-widget {
+      /* Le widget garde son fond blanc selon les spécifications */
+      background: transparent !important;
+  }
+}
+
+/* Styles pour éviter les conflits avec les overlays Google Meet */
+#floating-bubbles-container {
+  /* Ne pas interferer avec les modales et popups de Google Meet */
+  position: fixed !important;
+  z-index: 10001 !important;
+}
+
+/* Gestion des débordements et scroll */
 #floating-bubbles-widget {
-  z-index: 1 !important;
+  overflow: hidden !important;
+  /* Empêcher le scroll sur l'iframe elle-même */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-/* Prévenir les conflits avec les styles Google Meet */
-#floating-bubbles-container * {
-  box-sizing: border-box !important;
+#floating-bubbles-widget::-webkit-scrollbar {
+  display: none !important;
 }
 
-/* Animation de chargement si nécessaire */
-#floating-bubbles-widget[src=""] {
-  opacity: 0;
-  transition: opacity 0.3s ease;
+/* Animation d'entrée pour l'iframe */
+@keyframes slideInFromLeft {
+  0% {
+      opacity: 0;
+      transform: translateX(-100%);
+  }
+  100% {
+      opacity: 1;
+      transform: translateX(0);
+  }
 }
 
-#floating-bubbles-widget[src]:not([src=""]) {
-  opacity: 1;
+/* Animation de sortie pour l'iframe */
+@keyframes slideOutToLeft {
+  0% {
+      opacity: 1;
+      transform: translateX(0);
+  }
+  100% {
+      opacity: 0;
+      transform: translateX(-100%);
+  }
+}
+
+/* Classe pour l'animation d'entrée */
+#floating-bubbles-widget.entering {
+  animation: slideInFromLeft 0.4s ease-out !important;
+}
+
+/* Classe pour l'animation de sortie */
+#floating-bubbles-widget.exiting {
+  animation: slideOutToLeft 0.3s ease-in !important;
+}
+
+/* Styles pour les états de visibilité */
+#floating-bubbles-widget.hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(-100%) !important;
+}
+
+#floating-bubbles-widget.visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateX(0) !important;
+}
+
+/* Prévenir les interactions non désirées avec les contrôles Google Meet */
+#floating-bubbles-widget {
+  /* S'assurer que le widget ne capture pas les clics destinés aux contrôles Meet */
+  isolation: isolate !important;
+}
+
+/* Styles pour le mode debug/développement */
+#floating-bubbles-widget.debug {
+  border: 2px dashed rgba(255, 0, 0, 0.3) !important;
+  background: rgba(255, 255, 0, 0.1) !important;
+}
+
+/* Gestion des focus et accessibilité */
+#floating-bubbles-widget:focus-within {
+  outline: 2px solid rgba(59, 130, 246, 0.5) !important;
+  outline-offset: 2px !important;
+}
+
+/* Haute résolution / Retina */
+@media (min-resolution: 2dppx), (min-resolution: 192dpi) {
+  #floating-bubbles-widget {
+      /* Optimisations pour les écrans haute résolution */
+      image-rendering: -webkit-optimize-contrast !important;
+      image-rendering: crisp-edges !important;
+  }
+}
+
+/* Styles pour les environnements avec préférences de mouvement réduites */
+@media (prefers-reduced-motion: reduce) {
+  #floating-bubbles-widget {
+      transition: none !important;
+      animation: none !important;
+  }
+  
+  #floating-bubbles-widget.entering,
+  #floating-bubbles-widget.exiting {
+      animation: none !important;
+  }
+}
+
+/* Corrections pour les problèmes de z-index spécifiques à Google Meet */
+body[data-call-state] #floating-bubbles-container {
+  z-index: 10001 !important;
+}
+
+/* Assurer que le widget reste visible même avec les overlays Google Meet */
+[data-call-screen-sharing] ~ #floating-bubbles-container,
+[data-call-presentation] ~ #floating-bubbles-container {
+  z-index: 10002 !important;
+}
+
+#floating-bubbles-container {
+  /* Isolation du contexte de superposition */
+  isolation: isolate !important;
+}
+
+/* Print styles - Cacher le widget lors de l'impression */
+@media print {
+  #floating-bubbles-container,
+  #floating-bubbles-widget {
+      display: none !important;
+  }
 }
