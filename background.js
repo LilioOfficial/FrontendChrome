@@ -27,6 +27,9 @@ class FloatingBubblesBackgroundManager {
       
       // Configurer le menu contextuel
       this.setupContextMenu();
+
+        // Configurer le WebSocket pour les notifications en temps réel
+      this.setupWebSocket();
       
       console.log('Background Manager initialisé');
   }
@@ -52,6 +55,32 @@ class FloatingBubblesBackgroundManager {
           return false;
       }
   }
+
+  setupWebSocket() {
+    const wsUrl = 'wss://dev.lili-o.com/ws/frontend?name=api.chat'; // Remplacer par votre URL WebSocket
+    this.socket = new WebSocket(wsUrl);
+    console.log('Configuration du WebSocket:', wsUrl);
+    this.socket.onopen = () => {
+      console.log('WebSocket connecté');
+      this.socket.send(JSON.stringify({ event: 'subscribe', channel: 'notifications' }));
+    };
+
+    this.socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Données reçues via WebSocket:', data);
+      this.addBubbleToTab(this.activeTabId, data); // Utiliser BublleData pour formater les données
+    };
+
+    this.socket.onerror = (error) => {
+      console.error('Erreur WebSocket:', error);
+    };
+
+    this.socket.onclose = () => {
+      console.log('WebSocket fermé, tentative de reconnexion dans 5 secondes');
+      setTimeout(() => this.setupWebSocket(), 5000);
+    };
+  }
+
 
   setupEventListeners() {
       // Écouter les messages des content scripts et popup
