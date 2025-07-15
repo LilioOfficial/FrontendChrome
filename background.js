@@ -14,25 +14,38 @@ class FloatingBubblesBackgroundManager {
   }
 
   init() {
-      console.log('Initialisation du Background Manager...');
-      
-      // Charger les préférences sauvegardées
-      this.loadPreferences();
-      
-      // Configurer les écouteurs d'événements
-      this.setupEventListeners();
-      
-      // Configurer les alarmes pour les notifications automatiques
-      this.setupAlarms();
-      
-      // Configurer le menu contextuel
-      this.setupContextMenu();
+    console.log('Initialisation du Background Manager...');
+    
+    // Charger les préférences sauvegardées
+    this.loadPreferences();
+    
+    // Configurer les écouteurs d'événements
+    this.setupEventListeners();
+    
+    // Configurer les alarmes pour les notifications automatiques
+    this.setupAlarms();
+    
+    // Configurer le menu contextuel
+    this.setupContextMenu();
 
-        // Configurer le WebSocket pour les notifications en temps réel
-      this.setupWebSocket();
+    // Configurer le WebSocket pour les notifications en temps réel
+    chrome.runtime.onMessage.addListener((msg, sender) => {
+        if (msg.action === 'pageContext') {
+          const isInMeeting = msg.inMeeting;
+          const pageUrl = decodeURI(msg.url);
       
-      console.log('Background Manager initialisé');
-  }
+          console.log('[Background] Page context:', isInMeeting ? 'Meeting' : 'Home');
+      
+          const wsName = isInMeeting ? 'meet-session' : 'landing';
+          if (isInMeeting) {
+            console.log('WebSocket pour la session Meet activé:', pageUrl);
+            this.setupWebSocket(pageUrl);  // Reconnect with updated context
+          }
+        }
+      });
+      
+    console.log('Background Manager initialisé');  
+}
 
   async loadPreferences() {
       try {
@@ -56,30 +69,49 @@ class FloatingBubblesBackgroundManager {
       }
   }
 
-  setupWebSocket() {
-    const wsUrl = 'wss://dev.lili-o.com/ws/frontend?name=api.chat'; // Remplacer par votre URL WebSocket
+  setupWebSocket(tabUrl) {
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        console.log('Fermeture du WebSocket existant avant de le recréer');
+
+        this.socket.close();
+    }
+
+    tabUrl = this.extractMeetCode(tabUrl) || tabUrl; // Extraire le code de la réunion si disponible
+    console.log('URL de la réunion extraite:', tabUrl);
+
+    const wsUrl = `wss://dev.lili-o.com/ws/frontend?name=${tabUrl}`;
+
     this.socket = new WebSocket(wsUrl);
     console.log('Configuration du WebSocket:', wsUrl);
+
     this.socket.onopen = () => {
-      console.log('WebSocket connecté');
-      this.socket.send(JSON.stringify({ event: 'subscribe', channel: 'notifications' }));
+        console.log('WebSocket connecté');
+        // this.socket.send(JSON.stringify({ event: 'subscribe', channel: 'notifications' }));
     };
 
-    this.socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('Données reçues via WebSocket:', data);
-      this.addBubbleToTab(this.activeTabId, data); // Utiliser BublleData pour formater les données
+    this.socket.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+        console.log('Données reçues via WebSocket:', data);
+
+        if (!this.activeTabId) {
+            console.warn("Aucun onglet actif trouvé.");
+            return;
+        }
+
+        await this.addBubbleToTab(this.activeTabId, data);
     };
 
     this.socket.onerror = (error) => {
-      console.error('Erreur WebSocket:', error);
+        console.error('Erreur WebSocket:', error);
     };
 
-    this.socket.onclose = () => {
-      console.log('WebSocket fermé, tentative de reconnexion dans 5 secondes');
-      setTimeout(() => this.setupWebSocket(), 5000);
+    this.socket.onclose = (e) => {
+        console.log('WebSocket fermé:', e.reason, 'Reconnexion dans 5s...');
+        setTimeout(() => {
+            this.setupWebSocket(tabUrl);
+        }, 5000);
     };
-  }
+}
 
 
   setupEventListeners() {
@@ -300,9 +332,9 @@ class FloatingBubblesBackgroundManager {
   async addBubbleToTab(tabId, bubbleData) {
       try {
           const bubble = bubbleData || this.generateSampleBubble();
-          this.socket.send(
-                JSON.stringify({"action" : "clickButton"})
-          )
+        //   this.socket.send(
+        //         JSON.stringify({"action" : "clickButton"})
+        //   )
           await chrome.tabs.sendMessage(tabId, { 
               action: 'addBubble', 
               bubble: bubble 
@@ -432,6 +464,16 @@ class FloatingBubblesBackgroundManager {
           // Mise à jour
           console.log('Extension mise à jour vers la version', chrome.runtime.getManifest().version);
       }
+  }
+
+    extractMeetCode(url) {
+    try {
+      const decoded = decodeURIComponent(url);
+      const match = decoded.match(/https:\/\/meet\.google\.com\/([a-z]{3}-[a-z]{4}-[a-z]{3})/);
+      return match ? match[1] : null;
+    } catch (e) {
+      return null;
+    }
   }
 }
 

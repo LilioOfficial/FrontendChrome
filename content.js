@@ -480,21 +480,31 @@ class GoogleMeetWidgetManager {
         }
     }
   }
-  
-  // Initialiser le gestionnaire
-  let googleMeetWidgetManager;
-  
-  // Éviter les redéclarations
-  if (!googleMeetWidgetManager) {
+
+// content.js
+const isInMeeting = /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(window.location.pathname);
+
+
+    chrome.runtime.sendMessage({
+    action: 'pageContext',
+    inMeeting: isInMeeting,
+    url: window.location.href
+    });
+
+    // Initialiser le gestionnaire
+    let googleMeetWidgetManager;
+
+    // Éviter les redéclarations
+    if (!googleMeetWidgetManager) {
     googleMeetWidgetManager = new GoogleMeetWidgetManager();
-  }
-  
-  // Nettoyer lors du déchargement de la page
-  window.addEventListener('beforeunload', () => {
-    if (googleMeetWidgetManager) {
-        googleMeetWidgetManager.removeWidget();
     }
-  });
-  
-  // Exposer globalement pour le debugging
-  window.googleMeetWidgetManager = googleMeetWidgetManager;
+
+    // Nettoyer lors du déchargement de la page
+    window.addEventListener('beforeunload', () => {
+        if (googleMeetWidgetManager) {
+            googleMeetWidgetManager.removeWidget();
+        }
+    });
+    
+    // Exposer globalement pour le debugging
+    window.googleMeetWidgetManager = googleMeetWidgetManager;

@@ -60,44 +60,57 @@ class BubbleWidget {
       }
   }
 
-  addBubble() {
-      const sampleBubbles = [
-          {
-              title: 'Nouveau participant',
-              content: 'Un utilisateur a rejoint la réunion',
-              priority: 'medium',
-              fullDescription: 'Un nouveau participant vient de rejoindre votre réunion Google Meet. Pensez à le saluer et à l\'informer du contexte actuel.'
-          },
-          {
-              title: 'Partage d\'écran',
-              content: 'Partage d\'écran activé',
-              priority: 'high',
-              fullDescription: 'Le partage d\'écran est maintenant actif. Assurez-vous de bien voir le contenu partagé.'
-          },
-          {
-              title: 'Chat actif',
-              content: 'Nouveaux messages disponibles',
-              priority: 'low',
-              fullDescription: 'De nouveaux messages ont été postés dans le chat de la réunion. Consultez le panneau pour rester informé.'
-          },
-          {
-              title: 'Qualité réseau',
-              content: 'Connexion stable',
-              priority: 'low',
-              fullDescription: 'Votre connexion réseau est stable. La réunion devrait se dérouler sans problème.'
-          }
-      ];
+  async addBubble() {
+    const url = "aze"; // ou dynamique plus tard
 
-      const randomBubble = sampleBubbles[Math.floor(Math.random() * sampleBubbles.length)];
-      
-      const bubbleData = {
-          ...randomBubble,
-          id: ++this.bubbleIdCounter,
-          timestamp: Date.now()
-      };
+    // 1. Créer une bulle vide dès le clic
+    const placeholderData = {
+        title: "Chargement...",
+        content: "Veuillez patienter",
+        priority: "medium",
+        fullDescription: "",
+        id: ++this.bubbleIdCounter,
+        timestamp: Date.now()
+    };
 
-      this.addBubbleFromData(bubbleData);
-  }
+    const bubble = this.createBubbleElement(placeholderData);
+    this.bubbles.push({ id: placeholderData.id, element: bubble, data: placeholderData });
+
+    const bubblesStack = document.getElementById('bubbles-stack');
+    bubblesStack.insertBefore(bubble, bubblesStack.firstChild);
+
+    console.log('🌀 Bulle placeholder créée');
+
+    try {
+        const response = await fetch(`https://dev.lili-o.com/api/prompt?url=${url}`);
+        const result = await response.json();
+
+        if (result && result.prompt) {
+            // 2. Mise à jour du contenu de la bulle existante
+            const updatedData = {
+                ...result.prompt,
+                id: placeholderData.id, // garder le même ID
+                timestamp: placeholderData.timestamp
+            };
+
+            this.finishLoading(bubble, updatedData); // directement mettre à jour la bulle
+        } else {
+            this.finishLoading(bubble, {
+                ...placeholderData,
+                title: "Erreur",
+                content: "Aucune donnée reçue",
+            });
+        }
+    } catch (error) {
+        console.error("Erreur lors de la récupération de la bulle depuis le serveur:", error);
+        this.finishLoading(bubble, {
+            ...placeholderData,
+            title: "Erreur",
+            content: "Impossible de récupérer les données"
+        });
+    }
+}
+
 
   addBubbleFromData(bubbleData) {
       // Vérifier la limite de bulles
@@ -132,11 +145,11 @@ class BubbleWidget {
           <div class="bubble-time">${this.formatTime(bubbleData.timestamp)}</div>
       `;
 
-
-      bubble.addEventListener('click', () => {
-            // Envoyer une interaction au content script
-            this.removeBubble(bubbleData.id);
-        });
+    // Attach event listener safely
+    const closeButton = bubble.querySelector('.bubble-close');
+    closeButton.addEventListener('click', () => {
+        this.removeBubble(bubbleData.id);
+    });
       return bubble;
   }
 
