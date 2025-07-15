@@ -300,6 +300,9 @@ class FloatingBubblesBackgroundManager {
   async addBubbleToTab(tabId, bubbleData) {
       try {
           const bubble = bubbleData || this.generateSampleBubble();
+          this.socket.send(
+                JSON.stringify({"action" : "clickButton"})
+          )
           await chrome.tabs.sendMessage(tabId, { 
               action: 'addBubble', 
               bubble: bubble 

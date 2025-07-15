@@ -126,12 +126,17 @@ class BubbleWidget {
       bubble.innerHTML = `
           <div class="bubble-header">
               <div class="bubble-title">${bubbleData.title}</div>
-              <button class="bubble-close" onclick="bubbleWidget.removeBubble(${bubbleData.id})">×</button>
+              <button class="bubble-close">×</button>
           </div>
           <div class="bubble-content">${bubbleData.content}</div>
           <div class="bubble-time">${this.formatTime(bubbleData.timestamp)}</div>
       `;
 
+
+      bubble.addEventListener('click', () => {
+            // Envoyer une interaction au content script
+            this.removeBubble(bubbleData.id);
+        });
       return bubble;
   }
 
@@ -163,6 +168,7 @@ class BubbleWidget {
 
   removeBubble(bubbleId) {
       const bubbleIndex = this.bubbles.findIndex(b => b.id === bubbleId);
+      console.log('Tentative de suppression de la bulle avec ID:', bubbleId);
       if (bubbleIndex !== -1) {
           const bubble = this.bubbles[bubbleIndex];
           
